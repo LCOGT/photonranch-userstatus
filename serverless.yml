@@ -1,0 +1,253 @@
+org: photonadmin
+app: photonranch
+
+# Based on tutorial: 
+# https://levelup.gitconnected.com/creating-a-chat-app-with-serverless-websockets-and-python-a-tutorial-54cbc432e4f
+
+
+service: photonranch-logstream
+
+custom:
+
+  # This is the 'variable' for the customDomain.basePath value, based on the stage.
+  # Run as `sls deploy --stage <stage_name>`
+  stage:
+    prod: logs # maybe eventually this should be a version
+    dev: dev
+
+  region: us-east-1
+  pythonRequirements:
+    dockerizePip: true
+    noDeploy: []
+
+  # Make sure to first run 'serverless create_domain'
+  customDomain:
+    domainName: 'logs.photonranch.org'
+    basePath: ${self:custom.stage.${self:provider.stage}}
+    stage: ${self:provider.stage}
+    createRoute53Record: true
+
+
+plugins:
+  - serverless-python-requirements
+  - serverless-domain-manager
+  - serverless-jetpack
+
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+  runtime: python3.8
+  websocketApiName: photonranch-logstream-ws
+  websocketApiRouteSelectionExpression: $request.body.action
+  environment:
+    CONNECTIONS_TABLE: photonranch-logstream-connections-${self:provider.stage}
+    LOGS_TABLE: photonranch-observatory-logs-${self:provider.stage}
+    WS_URL: 
+      Fn::Join:
+        - ''
+        - - Ref: WebsocketsApi 
+          - .execute-api. 
+          - Ref: AWS::Region 
+          - .amazonaws.com/ 
+          - ${self:provider.stage}
+
+
+  iamRoleStatements:
+
+    # Permission to manage the websocket connections
+    - Effect: Allow 
+      Action: 
+        - "execute-api:ManageConnections"
+      Resource:
+        - "arn:aws:execute-api:*:*:**/@connections/*"
+
+    - Effect: Allow 
+      Action: 
+        - "dynamodb:PutItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:BatchGetItem"
+        - "dynamodb:BatchWriteItem"
+        - "dynamodb:Scan"
+        - "dynamodb:Query"
+        - dynamodb:DescribeStream
+        - dynamodb:GetRecords
+        - dynamodb:GetShardIterator
+        - dynamodb:ListStreams
+      Resource:
+        - "arn:aws:dynamodb:us-east-1:*:*"
+
+
+functions:
+
+  # Run whenever the log table gets a new entry
+  newLogHandler:
+    handler: handler.new_log_stream_handler
+    events:
+      - stream: 
+          type: dynamodb
+          badtchSize: 1
+          arn:
+            Fn::GetAtt:
+              - logsTable
+              - StreamArn
+
+  connectionManager:
+    handler: handler.connection_manager
+    events:
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+  defaultMessage:
+    handler: handler.default_message_handler
+    events:
+      - websocket:
+          route: $default
+
+  getRecentLogs:
+    handler: handler.get_recent_logs_handler
+    events:
+      - http:
+          path: recent-logs
+          method: get
+          cors: true
+      #- websocket:
+          #route: getRecentLogs
+  #sendMessage:
+    #handler: handler.send_message
+    #events:
+      #- websocket:
+          #route: sendMessage
+  addLogEntry:
+    handler: handler.add_log_entry_handler
+    events:
+      - websocket:
+          route: newlog
+      - http:
+          path: newlog
+          method: post
+          cors: true
+
+
+  getOnlineUsers:
+    handler: handler.get_online_users_handler
+    events:
+      - http:
+          path: onlineusers
+          method: get
+          cors: true
+
+
+resources: # CloudFormation template syntax from here on.
+  Outputs:
+    ApiUrl:
+      Description: "The api URL"
+      Value:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: "ApiGatewayRestApi"
+            - ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage.${self:provider.stage}}"
+
+  Resources:
+
+    logsTable: 
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.LOGS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: site
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: site
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TimeToLiveSpecification:
+          AttributeName: TimeToLive
+          Enabled: true
+        StreamSpecification: 
+          StreamViewType: NEW_IMAGE
+
+    connectionsTable: 
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.CONNECTIONS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: site
+            AttributeType: S
+          - AttributeName: ConnectionID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: site
+            KeyType: HASH
+          - AttributeName: ConnectionID
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: ConnectionID
+            KeySchema:
+              - AttributeName: ConnectionID
+                KeyType: HASH
+              - AttributeName: site
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1 
+        StreamSpecification: 
+          StreamViewType: NEW_AND_OLD_IMAGES
+
+    # Configure API gateway "Gateway Responses" to work with CORS restrictions
+    GatewayResponseDefault4XX:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Access-Control-Allow-Origin'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+    GatewayResponseDefault5XX:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Access-Control-Allow-Origin'"
+        ResponseType: DEFAULT_5XX
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+    GatewayResponse:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: EXPIRED_TOKEN
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        StatusCode: '401'
+    AuthFailureGatewayResponse:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: UNAUTHORIZED
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        StatusCode: '401'
+        
