@@ -114,13 +114,6 @@ functions:
           path: recent-logs
           method: get
           cors: true
-      #- websocket:
-          #route: getRecentLogs
-  #sendMessage:
-    #handler: handler.send_message
-    #events:
-      #- websocket:
-          #route: sendMessage
   addLogEntry:
     handler: handler.add_log_entry_handler
     events:
@@ -130,8 +123,6 @@ functions:
           path: newlog
           method: post
           cors: true
-
-
   getOnlineUsers:
     handler: handler.get_online_users_handler
     events:
