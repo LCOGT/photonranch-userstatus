@@ -20,11 +20,6 @@ CONNECTIONS_TABLE = "photonranch-logstream-connections-dev"
 LOGS_TABLE = "photonranch-observatory-logs-dev"
 
 
-def test_get_online_users():
-    site = "tst"
-    online_users = get_online_users(site)
-    assert isinstance(online_users, list)
-
 def test_get_recent_logs():
 
     site = "tst"

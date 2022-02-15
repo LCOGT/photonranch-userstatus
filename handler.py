@@ -14,7 +14,7 @@ dynamodb = boto3.resource("dynamodb")
 
 # Include fallback values in case these env variables are not set.
 # This is primarily used when running tests.
-CONNECTIONS_TABLE = os.getenv('CONNECTIONS_TABLE', 'photonranch-logstream-connections-dev')
+
 LOGS_TABLE = os.getenv('LOGS_TABLE', 'photonranch-observatory-logs-dev')
 
 table = dynamodb.Table(LOGS_TABLE)
@@ -53,124 +53,32 @@ def _get_body(event):
         logger.debug("event body could not be JSON decoded.")
         return {}
 
-def _remove_all_connections():
-    connectionsTable = dynamodb.Table(CONNECTIONS_TABLE)
-    scan =connectionsTable.scan()
-    with connectionsTable.batch_writer() as batch:
-        for each in scan['Items']:
-            batch.delete_item(
-                Key={
-                    'site': each['site'],
-                    'ConnectionID': each['ConnectionID']
-                }
-            )
+def get_queue_url(queueName):
+    sqs_client = boto3.client("sqs", region_name="us-east-1")
+    response = sqs_client.get_queue_url(
+        QueueName=queueName,
+    )
+    return response["QueueUrl"]
 
-def get_ws_url_from_event(event):
-    """
-    Using the event that api-gateway websockets pass to the lambda, generate
-    the websocket url used to respond.
-    """
-    return f"https://{os.getenv('WS_URL')}"
+def send_to_datastream(site, data):
+    sqs = boto3.client('sqs')
+    queue_url = get_queue_url('datastreamIncomingQueue-dev')
 
-################################################
-##########        Websockets        ############
-################################################
+    payload = {
+        "topic": "userstatus",
+        "site": site,
+        "data": data,
+    }
+    response = sqs.send_message(
+        QueueUrl=queue_url,
+        MessageBody=json.dumps(payload),
+    )
+    return response
 
-def connection_manager(event, context):
-    """
-    Handles connecting and disconnecting for the Websocket
-    """
-    connectionID = event["requestContext"].get("connectionId")
-    table = dynamodb.Table(CONNECTIONS_TABLE)
-
-    print(json.dumps(event.get("queryStringParameters", []), indent=2))
-
-    if event["requestContext"]["eventType"] == "CONNECT":
-        logger.info("Connect requested")
-        site = event["queryStringParameters"]["site"]
-
-        # Add connectionID to the database
-        table.put_item(Item={
-            "site": site, 
-            "ConnectionID": connectionID,
-            "ConnectionStartedUTC": str(datetime.datetime.utcnow())
-            })
-
-        return http_response(200, "Connect successful.")
-
-    elif event["requestContext"]["eventType"] in ("DISCONNECT", "CLOSE"):
-        logger.info("Disconnect requested")
-
-        # Get the details for the connection ID that is disconnecting
-        connections = table.query(
-            IndexName="ConnectionID",
-            KeyConditionExpression=Key('ConnectionID').eq(connectionID)
-        )
-
-        for c in connections['Items']:
-            # Remove each connection for the connectionID from the database
-            table.delete_item(
-                Key={
-                    "site": c["site"],
-                    "ConnectionID": c["ConnectionID"]
-                }
-            ) 
-        
-        return http_response(200, "Disconnect successful.")
-
-    else:
-        logger.error("Connection manager received unrecognized eventType '{}'")
-        return http_response(500, "Unrecognized eventType.")
-
-
-def send_to_connection(connection_id: str, data: dict, ws_url: str):
-
-    gatewayapi = boto3.client( "apigatewaymanagementapi", endpoint_url=ws_url)
-
-    try: 
-        posted = gatewayapi.post_to_connection(
-            ConnectionId=connection_id,
-            Data=json.dumps(data, cls=DecimalEncoder).encode('utf-8')
-        )
-
-    except Exception as e:
-        print(f"Could not send to connection {connection_id}")
-        print(e)
-
-def send_to_all_connections(site: str, payload: dict, ws_url: str):
-
-        users = get_online_users(site)
-        connections = [user["ConnectionID"] for user in users if "ConnectionID" in user]
-
-        # Send the message data to all connections
-        logger.debug("Broadcasting message: {}".format(payload))
-        for connectionID in connections:
-            send_to_connection(connectionID, payload, ws_url)
 
 ################################################
 ##########      Core Functions      ############
 ################################################
-
-
-def get_online_users(site):
-    """
-    This is the helper function that returns a list of dicts representing
-    the users online in a given room.
-    """
-
-    table = dynamodb.Table(CONNECTIONS_TABLE)
-
-    response = table.query(KeyConditionExpression=Key('site').eq(site))
-    items = response.get("Items", [])
-
-    connections = [
-        {
-            "ConnectionID": x["ConnectionID"],
-        } 
-        for x in items if "ConnectionID" in x
-    ]
-    return connections
-
 
 def get_recent_logs(site, timestamp_max_age):
 
@@ -193,7 +101,6 @@ def get_recent_logs(site, timestamp_max_age):
     return messages
 
 def add_log_entry(entry):
-    
     table = dynamodb.Table(LOGS_TABLE)
 
     # Add the new message to the database
@@ -211,28 +118,8 @@ def add_log_entry(entry):
 ##########     Handler Functions    ############
 ################################################
 
-def get_online_users_handler(event, context):
-    """
-    This is the api endpoint which uses get_online_users().
-    """
-    site = event["queryStringParameters"].get("site", "error")
-    if site == "error":
-        return http_response(400, "Requires query string param 'site'.")
-    users = get_online_users(site)
-    return http_response(200, json.dumps(users, cls=DecimalEncoder))
-
-
-def default_message_handler(event, context):
-    """
-    Send back error when unrecognized WebSocket action is received.
-    """
-    logger.info("Unrecognized WebSocket action received.")
-    return http_response(400, "Unrecognized WebSocket action.")
-
-
 def get_recent_logs_handler(event, context):
     print(event)
-
     timestamp_max_age = int(event["queryStringParameters"].get("after_time"))
     site = event["queryStringParameters"].get("site")
 
@@ -242,10 +129,8 @@ def get_recent_logs_handler(event, context):
 
 
 def add_log_entry_handler(event, context):
-
     print(event)
     body = _get_body(event)
-
     entry = {
         "site": body["site"],
         "log_message": body["log_message"],
@@ -284,9 +169,7 @@ def new_log_stream_handler(event, context):
         }]}
     """
     print(event)
-
     record = event["Records"][0]
-
     for record in event["Records"]:
 
         # We only care about new messages; skip all others
@@ -319,10 +202,9 @@ def new_log_stream_handler(event, context):
             "log_level": log_level,
             "timestamp": timestamp
         }
-        ws_url = get_ws_url_from_event(event)
 
         # Send the new message to all subscribers
-        send_to_all_connections(site, data_to_send, ws_url)
+        send_to_datastream(site, data_to_send)
 
 
 if __name__=="__main__":
@@ -331,7 +213,7 @@ if __name__=="__main__":
     import requests
 
     def post_log_entry():
-        url = "https://logs.photonranch.org/logs/newlog"
+        url = "https://logs.photonranch.org/dev/newlog"
         body = json.dumps({
             "site": "tst",
             "log_message": """Here is a log sent with python.
