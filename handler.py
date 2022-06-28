@@ -129,6 +129,7 @@ def get_recent_logs_handler(event, context):
 
 
 def add_log_entry_handler(event, context):
+    # Authorization handled in the frontend, which might need to change
     print(event)
     body = _get_body(event)
     entry = {
