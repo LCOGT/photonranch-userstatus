@@ -16,13 +16,13 @@ that convention in mind (even though the repository name has diverged).
 Authenticated admin users and observatory owners can compose a message to be 
 displayed in the control room (e.g. explain equipment malfunction, warn about weather, etc).
 
-![Creating a message as an admin](images/admin_message.PNG)
+![Creating a message as an admin](images/admin_message.png)
 
 Users will then be able to view the message in the control room; the frontend 
 handles how long the message is visible, whether multiple messages are visible, and 
 whether or not it disappears after the user views it for the first time.
 
-![Creating a message as an admin](images/user_view.PNG)
+![Creating a message as an admin](images/user_view.png)
 
 ## Architecture
 
@@ -94,7 +94,7 @@ There are two query string parameters supplied in the request for recent logs:
 
 ```javascript
 {
-    "after_time": 0, // (int) unix timestamp in seconds of oldest message to be retrieved.
+    "after_time": Math.floor(Date.now() / 1000)-86400, // (int) unix timestamp in seconds of oldest message to be retrieved.
     "site": "tst", // (str) code for the site to be queried.
 }
 ```
