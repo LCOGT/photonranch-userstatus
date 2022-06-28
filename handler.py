@@ -61,7 +61,8 @@ def get_queue_url(queueName):
     return response["QueueUrl"]
 
 def send_to_datastream(site, data):
-    """Upon a new log added, send log to the dev datastream in AWS"""
+    """Upon a new log added, send log to the dev datastream in AWS."""
+    
     sqs = boto3.client('sqs')
     queue_url = get_queue_url('datastreamIncomingQueue-dev')
 
@@ -85,12 +86,13 @@ def get_recent_logs(site, timestamp_max_age):
     """Retrieves recent messages for a given site and timeframe.
     
     Args: 
-        site (str): site to query
+        site (str): site to query.
         timestamp_max_age (int): unix timestamp in seconds of oldest message to be retrieved.
 
     Returns:
         messages in chronological order if successful.    
     """
+
     logger.info("Retrieving most recent messages.")
 
     table = dynamodb.Table(LOGS_TABLE)
@@ -114,15 +116,15 @@ def add_log_entry(entry):
     
     Args: 
         entry in the form of {
-            "site" (str): code for the site that will display the message
-            "message" (str): content that the user will read
+            "site" (str): code for the site that will display the message.
+            "message" (str): content that the user will read.
             "log_level" (str): can be ["debug", "info", "warning", "error", "critical"] 
                 following the python logging convention. Default (if none provided) is info.
             "timestamp" (int): unix timestamp in seconds. Messages are sorted and displayed
                 chronologically using this value; the hh:mm time prefixes the message display.
              }
-
     """
+
     table = dynamodb.Table(LOGS_TABLE)
 
     # Add the new message to the database
@@ -165,8 +167,7 @@ def add_log_entry_handler(event, context):
     return http_response(200, "Succesfully added new log message.")
 
 def new_log_stream_handler(event, context):
-    """
-    Parses the new message and sends to datastream
+    """Parses the new message and sends to datastream.
 
     sample event: 
     {'Records': [{
@@ -193,6 +194,7 @@ def new_log_stream_handler(event, context):
         'eventSourceARN': 'arn:aws:dynamodb:us-east-1:306389350997:table/photonranch-observatory-logs/stream/2020-10-21T21:47:47.149'
         }]}
     """
+
     print(event)
     record = event["Records"][0]
     for record in event["Records"]:

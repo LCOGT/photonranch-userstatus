@@ -22,7 +22,7 @@ Users will then be able to view the message in the control room; the frontend
 handles how long the message is visible, whether multiple messages are visible, and 
 whether or not it disappears after the user views it for the first time.
 
-![Creating a message as an admin](images/user_view.png)
+![Viewing a message as a user](images/user_view.png)
 
 ## Architecture
 
@@ -38,7 +38,7 @@ all our messages; they are treated as transient notifications only.
 A basic architecture diagram is provided below. Note that there are additional
 endpoints and lambda functions not described, but this tells the basic idea.
 
-![alt text](https://i.imgur.com/T0OwvXi.png)
+![Architecture diagram showing get and post requests](https://i.imgur.com/T0OwvXi.png)
 
 ## Dependencies
 
@@ -90,11 +90,11 @@ There are four parameters supplied in the body of a message:
 ```javascript
 {
     "site": "tst",  // (str) code for the site that will display the message
-    "log_message": "tst site will be inoperable 2022-10-10 UTC" // (str) content that the 
+    "log_message": "tst site will be inoperable 2022-10-10 UTC", // (str) content that the 
     // user will read.
-    "log_level": "warning" //(str) can be ["debug", "info", "warning", "error", "critical"] 
+    "log_level": "warning", //(str) can be ["debug", "info", "warning", "error", "critical"] 
     // following the python logging convention. Default (if none provided) is info.
-    "timestamp": time.time() //(int) unix timestamp in seconds. Messages are sorted and 
+    "timestamp": time.time(), //(int) unix timestamp in seconds. Messages are sorted and 
     // displayed chronologically using this value; the hh:mm time prefixes the message display.
 }
 ```
