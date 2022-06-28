@@ -66,11 +66,16 @@ configuring with your own AWS credentials.
 
 This project currently has two stages, `prod` and `dev`. 
 For manual deployment on your local machine, you'll need to fill out the 
-`public_key` and `secrets.json` with the required information. Then, run:
+`public_key` and `secrets.json` with the required information, and install packages:
 
 ```
 npm install
 serverless plugin install --name serverless-python-requirements
+```
+
+To deploy, run:
+
+```
 serverless deploy --stage {stage}
 ```
 
@@ -85,16 +90,20 @@ There are four parameters supplied in the body of a message:
 ```javascript
 {
     "site": "tst",  // (str) code for the site that will display the message
-    "log_message": "tst site will be inoperable 2022-10-10 UTC" // (str) this content that the user will read.
-    "log_level": "warning" //(str) can be ["debug", "info", "warning", "error", "critical"] following the python logging convention. Default (if none provided) is info.
-    "timestamp": time.time() //(int) unix timestamp in seconds. Messages are sorted and displayed chronologically using this value, and the hh:mm time prefixes the message display.
+    "log_message": "tst site will be inoperable 2022-10-10 UTC" // (str) content that the 
+    // user will read.
+    "log_level": "warning" //(str) can be ["debug", "info", "warning", "error", "critical"] 
+    // following the python logging convention. Default (if none provided) is info.
+    "timestamp": time.time() //(int) unix timestamp in seconds. Messages are sorted and 
+    // displayed chronologically using this value; the hh:mm time prefixes the message display.
 }
 ```
 There are two query string parameters supplied in the request for recent logs:
 
 ```javascript
 {
-    "after_time": Math.floor(Date.now() / 1000)-86400, // (int) unix timestamp in seconds of oldest message to be retrieved.
+    "after_time": Math.floor(Date.now() / 1000)-86400, // (int) unix timestamp in seconds 
+    // of oldest message to be retrieved.
     "site": "tst", // (str) code for the site to be queried.
 }
 ```

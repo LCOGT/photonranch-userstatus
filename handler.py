@@ -61,6 +61,7 @@ def get_queue_url(queueName):
     return response["QueueUrl"]
 
 def send_to_datastream(site, data):
+    """Upon a new log added, send log to the dev datastream in AWS"""
     sqs = boto3.client('sqs')
     queue_url = get_queue_url('datastreamIncomingQueue-dev')
 
@@ -81,7 +82,15 @@ def send_to_datastream(site, data):
 ################################################
 
 def get_recent_logs(site, timestamp_max_age):
+    """Retrieves recent messages for a given site and timeframe.
+    
+    Args: 
+        site (str): site to query
+        timestamp_max_age (int): unix timestamp in seconds of oldest message to be retrieved.
 
+    Returns:
+        messages in chronological order if successful.    
+    """
     logger.info("Retrieving most recent messages.")
 
     table = dynamodb.Table(LOGS_TABLE)
@@ -101,6 +110,19 @@ def get_recent_logs(site, timestamp_max_age):
     return messages
 
 def add_log_entry(entry):
+    """Adds new log entry to dynamoDB table.
+    
+    Args: 
+        entry in the form of {
+            "site" (str): code for the site that will display the message
+            "message" (str): content that the user will read
+            "log_level" (str): can be ["debug", "info", "warning", "error", "critical"] 
+                following the python logging convention. Default (if none provided) is info.
+            "timestamp" (int): unix timestamp in seconds. Messages are sorted and displayed
+                chronologically using this value; the hh:mm time prefixes the message display.
+             }
+
+    """
     table = dynamodb.Table(LOGS_TABLE)
 
     # Add the new message to the database
@@ -129,7 +151,7 @@ def get_recent_logs_handler(event, context):
 
 
 def add_log_entry_handler(event, context):
-    # Authorization handled in the frontend, which might need to change
+    # Authorization handled in the frontend
     print(event)
     body = _get_body(event)
     entry = {
@@ -144,6 +166,8 @@ def add_log_entry_handler(event, context):
 
 def new_log_stream_handler(event, context):
     """
+    Parses the new message and sends to datastream
+
     sample event: 
     {'Records': [{
         eventID': '699f8495963197b9b17d91b2ec0946f0', 
