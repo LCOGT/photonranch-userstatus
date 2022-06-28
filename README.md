@@ -60,8 +60,7 @@ configuring with your own AWS credentials.
 ### Deployment
 
 This project currently has two stages, `prod` and `dev`. 
-For manual deployment on your local machine, you'll need to fill out the 
-`public_key` and `secrets.json` with the required information, and install packages:
+For manual deployment on your local machine, you'll need to install packages:
 
 ```
 npm install
