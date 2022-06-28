@@ -1,4 +1,4 @@
-# photonranch-userstatus
+# Photon Ranch User Status
 
 This is a Serverless project that deploys a websocket api used to send messages
 from an observatory to the frontend at www.photonranch.org in real time. It is 
@@ -14,7 +14,8 @@ that convention in mind (even though the repository name has diverged).
 ## Description
 
 Observatory owners can post logs to describe in detail the processes occuring at an observatory 
-for users to follow along with as they occur, within a given timeframe.
+for users to follow along with as they occur. These are accessible for a given timeframe, defined
+for our purposes as 24 hours.
 
 ![Viewing a message as a user](images/user_view.png)
 
@@ -84,7 +85,7 @@ There are four parameters supplied in the body of a message:
 ```javascript
 {
     "site": "tst",  // (str) code for the site that will display the message
-    "log_message": "tst site will be inoperable 2022-10-10 UTC", // (str) content that the 
+    "log_message": "Slewing telescope...", // (str) content that the 
     // user will read.
     "log_level": "warning", //(str) can be ["debug", "info", "warning", "error", "critical"] 
     // following the python logging convention. Default (if none provided) is info.
