@@ -1,6 +1,6 @@
 # photonranch-userstatus
 
-This is a serverless project that deploys a websocket api used to send messages
+This is a Serverless project that deploys a websocket api used to send messages
 from an observatory to the frontend at www.photonranch.org in real time. It is 
 reminiscent of a logging pipeline, and messages are presented as timestamped 
 messages with a priority status (eg. debug, info, warn, error, or critical).
@@ -26,7 +26,7 @@ whether or not it disappears after the user views it for the first time.
 
 ## Architecture
 
-This serverless app creates api gateway instances, one for http and one for
+This Serverless app creates api gateway instances, one for http and one for
 websockets. These both route requests to a layer of lambda functions, which
 interact with two dynamodb tables: one for storing messages, and one for
 keeping track of websocket connections.
@@ -139,8 +139,8 @@ Websocket messages will arrive with the following structure:
 
 ## API Endpoints
 
-Depending on your setup, the serverless project will deploy with a unique 
-endpoint url. For photon ranch, we will use the base url `https://logs.photonranch.org/logs`. 
+Depending on your setup, the Serverless project will deploy with a unique 
+endpoint url. For Photon Ranch, we will use the base url `https://logs.photonranch.org/logs`. 
 An additional dev endpoint is located at `https://logs.photonranch.org/dev`.
 
 - POST `/newlog`
