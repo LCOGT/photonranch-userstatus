@@ -77,7 +77,7 @@ serverless deploy --stage {stage}
 
 Instructions to manually run tests will be detailed here.
 
-## Event Syntax And Examples
+## Event Syntax
 
 There are four parameters supplied in the body of a message:
 
@@ -92,6 +92,7 @@ There are four parameters supplied in the body of a message:
     // displayed chronologically using this value; the hh:mm time prefixes the message display.
 }
 ```
+
 There are two query string parameters supplied in the request for recent logs:
 
 ```javascript
@@ -101,24 +102,6 @@ There are two query string parameters supplied in the request for recent logs:
     "site": "tst", // (str) code for the site to be queried.
 }
 ```
-
-### Example: sending a message
-
-```python
-import time, reqeusts, json
-def send_log_to_frontend():
-    url = "https://logs.photonranch.org/logs/newlog"
-    body = json.dumps({
-        "site": "saf",
-        "log_message": "Here is a log sent with python.",
-        "log_level": "info",
-        "timestamp": time.time(),
-    })
-    resp = requests.post(url, body)
-    print(resp)
-```
-
-### Receiving a message
 
 Websocket messages will arrive with the following structure:
 
@@ -143,6 +126,20 @@ An additional dev endpoint is located at `https://logs.photonranch.org/dev`.
   - Request body: JSON body as specified in syntax above.
   - Responses:
     - 200: Successfully added message
+  - Example request:
+  ```python
+  import time, reqeusts, json
+  def send_log_to_frontend():
+      url = "https://logs.photonranch.org/logs/newlog"
+      body = json.dumps({
+          "site": "saf",
+          "log_message": "Here is a log sent with python.",
+          "log_level": "info",
+          "timestamp": time.time(),
+      })
+      resp = requests.post(url, body)
+      print(resp)
+    ```
 
 - GET `/recent-logs`
   - Description: Retrieve logs within a certain timeframe
@@ -150,5 +147,24 @@ An additional dev endpoint is located at `https://logs.photonranch.org/dev`.
   - Request body: queryStringParameter as specified in syntax above.
   - Responses:
     - 200: Returns the recent logs
+  - Example request:
+  ```javascript
+  import axios from 'axios';
+  fetch_recent_logs() {
+      // Fetch any logs that are under a day old
+      const seconds_per_day = 86400
+      const timestamp_seconds = Math.floor(Date.now() / 1000)
+      const after_time_param = timestamp_seconds - seconds_per_day
+
+      // Form the url with query params
+      let url = url = "https://logs.photonranch.org/logs/recent-logs"
+      url += '?after_time=' + encodeURIComponent(after_time_param)
+      url += '&site=' + encodeURIComponent("tst")
+
+      axios.get(url).then(logs => { 
+          console.log(logs.data)
+        })
+    },
+  ```
 
 ## License
