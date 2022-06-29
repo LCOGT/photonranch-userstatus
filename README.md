@@ -93,16 +93,6 @@ There are four parameters supplied in the body of a message:
 }
 ```
 
-There are two query string parameters supplied in the request for recent logs:
-
-```javascript
-{
-    "after_time": Math.floor(Date.now() / 1000)-86400, // (int) unix timestamp in seconds 
-    // of oldest message to be retrieved; by default, this is 24 hours as definied in frontend
-    "site": "tst", // (str) code for the site to be queried.
-}
-```
-
 Websocket messages will arrive with the following structure:
 
 ```json
@@ -144,7 +134,9 @@ An additional dev endpoint is located at `https://logs.photonranch.org/dev`.
 - GET `/recent-logs`
   - Description: Retrieve logs within a certain timeframe
   - Authorization required: No
-  - Request body: queryStringParameter as specified in syntax above.
+  - Request body: 
+    - "after_time": integer in queryStringParameter, unix timestamp in seconds of oldest message to be retrieved
+    - "site": string in queryStringParameter, code for the site to be queried
   - Responses:
     - 200: Returns the recent logs
   - Example request:
