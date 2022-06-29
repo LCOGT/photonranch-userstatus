@@ -118,6 +118,7 @@ An additional dev endpoint is located at `https://logs.photonranch.org/dev`.
     - 200: Successfully added message
   - Example request:
   ```python
+  # python 3.6
   import time, reqeusts, json
   def send_log_to_frontend():
       url = "https://logs.photonranch.org/logs/newlog"
@@ -141,7 +142,8 @@ An additional dev endpoint is located at `https://logs.photonranch.org/dev`.
     - 200: Returns the recent logs
   - Example request:
   ```javascript
-  import axios from 'axios';
+  // javascript
+  const axios = require('axios');
   fetch_recent_logs() {
       // Fetch any logs that are under a day old
       const seconds_per_day = 86400
