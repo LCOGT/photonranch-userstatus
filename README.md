@@ -134,7 +134,7 @@ An additional dev endpoint is located at `https://logs.photonranch.org/dev`.
 - GET `/recent-logs`
   - Description: Retrieve logs within a certain timeframe
   - Authorization required: No
-  - Request body: 
+  - Path Params: 
     - "after_time": integer in queryStringParameter, unix timestamp in seconds of oldest message to be retrieved
     - "site": string in queryStringParameter, code for the site to be queried
   - Responses:
