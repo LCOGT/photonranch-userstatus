@@ -1,9 +1,9 @@
-# photonranch-userstatus
+# Photon Ranch User Status
 
-This is a serverless project that deploys a websocket api used to send messages
-from an observatory to the frontend in real time. It is reminiscent of a logging
-pipeline, and messages are presented as timestamped messages with a priority
-status (eg. debug, info, warn, error, or critical).
+This is a Serverless project that deploys a websocket api used to send messages
+from an observatory to the frontend at www.photonranch.org in real time. It is 
+reminiscent of a logging pipeline, and messages are presented as timestamped 
+messages with a priority status (eg. debug, info, warn, error, or critical).
 
 The original task was streaming logs from the observatory so operators could
 more easily debug/troubleshoot from just the frontend. But we've pivoted to
@@ -11,9 +11,17 @@ using this as a way to send more general messages to the user instead. The
 original name was 'logstream', and the backend resources are still named with
 that convention in mind (even though the repository name has diverged).
 
+## Description
+
+Observatory owners can post logs to describe in detail the processes occuring at an observatory 
+for users to follow along with as they occur. These are accessible for a given timeframe, defined
+for our purposes as 24 hours.
+
+![Viewing a message as a user](images/user_view.png)
+
 ## Architecture
 
-This serverless app creates api gateway instances, one for http and one for
+This Serverless app creates api gateway instances, one for http and one for
 websockets. These both route requests to a layer of lambda functions, which
 interact with two dynamodb tables: one for storing messages, and one for
 keeping track of websocket connections.
@@ -25,41 +33,65 @@ all our messages; they are treated as transient notifications only.
 A basic architecture diagram is provided below. Note that there are additional
 endpoints and lambda functions not described, but this tells the basic idea.
 
-![alt text](https://i.imgur.com/T0OwvXi.png)
+![Architecture diagram showing get and post requests](https://i.imgur.com/T0OwvXi.png)
 
-## Usage
+## Dependencies
 
-Depending on your setup, the serverless project will deploy with a unique 
-endpoint url. For photon ranch (and for the following examples), we will 
-use the base url `https://logs.photonranch.org/logs`.
+Dependencies will be listed here.
 
-### Example: sending a message
+## Local Development
 
-```python
-import time, reqeusts, json
-def send_log_to_frontend():
-    url = "https://logs.photonranch.org/logs/newlog"
-    body = json.dumps({
-        "site": "saf",
-        "log_message": "Here is a log sent with python.",
-        "log_level": "info",
-        "timestamp": time.time(),
-    })
-    resp = requests.post(url, body)
-    print(resp)
+Clone the repository to your local machine:
+
+```
+git clone https://github.com/LCOGT/photonranch-userstatus.git
+cd photonranch-userstatus
 ```
 
-There are four parameters supplied in the body:
+### Requirements
 
-- site (str): code for the site that will display the message.
-- log_message (str): this content that the user will read.
-- log_level (str): can be ["debug", "info", "warning", "error", "critical"]
-following the python logging convention. Default (if none provided) is info.
-- timestamp (int): unix timestamp in seconds. Messages are sorted and displayed
-chronologically using this value, and the hh:mm time prefixes the message
-display.
+You will need the [Serverless Framework](https://www.serverless.com/framework/docs/getting-started) 
+installed locally for development. For manual deployment to AWS as well as for updating dependencies, 
+you will need to install [Node](https://nodejs.org/en/), 
+[npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm), 
+and [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), 
+configuring with your own AWS credentials.
 
-### Receiving a message
+### Deployment
+
+This project currently has two stages, `prod` and `dev`. 
+For manual deployment on your local machine, you'll need to install packages:
+
+```
+npm install
+serverless plugin install --name serverless-python-requirements
+```
+
+To deploy, run:
+
+```
+serverless deploy --stage {stage}
+```
+
+### Testing
+
+Instructions to manually run tests will be detailed here.
+
+## Event Syntax
+
+There are four parameters supplied in the body of a message:
+
+```javascript
+{
+    "site": "tst",  // (str) code for the site that will display the message
+    "log_message": "Slewing telescope...", // (str) content that the 
+    // user will read.
+    "log_level": "warning", //(str) can be ["debug", "info", "warning", "error", "critical"] 
+    // following the python logging convention. Default (if none provided) is info.
+    "timestamp": time.time(), //(int) unix timestamp in seconds. Messages are sorted and 
+    // displayed chronologically using this value; the hh:mm time prefixes the message display.
+}
+```
 
 Websocket messages will arrive with the following structure:
 
@@ -72,7 +104,61 @@ Websocket messages will arrive with the following structure:
 }
 ```
 
-### More information
+## API Endpoints
 
-For a complete look at the available endpoints, refer to `serverless.yml` which
-defines all the infrastructure that this app deploys.
+Depending on your setup, the Serverless project will deploy with a unique 
+endpoint url. For Photon Ranch, we will use the base url `https://logs.photonranch.org/logs`. 
+An additional dev endpoint is located at `https://logs.photonranch.org/dev`.
+
+- POST `/newlog`
+  - Description: Add new message entry in the log.
+  - Authorization required: No
+  - Request body: JSON body as specified in syntax above.
+  - Responses:
+    - 200: Successfully added message
+  - Example request:
+  ```python
+  # python 3.6
+  import time, reqeusts, json
+  def send_log_to_frontend():
+      url = "https://logs.photonranch.org/logs/newlog"
+      body = json.dumps({
+          "site": "saf",
+          "log_message": "Here is a log sent with python.",
+          "log_level": "info",
+          "timestamp": time.time(),
+      })
+      resp = requests.post(url, body)
+      print(resp)
+    ```
+
+- GET `/recent-logs`
+  - Description: Retrieve logs within a certain timeframe
+  - Authorization required: No
+  - Query Params: 
+    - "after_time": (int) unix timestamp in seconds of oldest message to be retrieved
+    - "site": (str) code for the site to be queried
+  - Responses:
+    - 200: Returns the recent logs
+  - Example request:
+  ```javascript
+  // javascript
+  const axios = require('axios');
+  fetch_recent_logs() {
+      // Fetch any logs that are under a day old
+      const seconds_per_day = 86400
+      const timestamp_seconds = Math.floor(Date.now() / 1000)
+      const after_time_param = timestamp_seconds - seconds_per_day
+
+      // Form the url with query params
+      let url = url = "https://logs.photonranch.org/logs/recent-logs"
+      url += '?after_time=' + encodeURIComponent(after_time_param)
+      url += '&site=' + encodeURIComponent("tst")
+
+      axios.get(url).then(logs => { 
+          console.log(logs.data)
+        })
+    },
+  ```
+
+## License
