@@ -62,7 +62,7 @@ def get_queue_url(queueName):
 
 def send_to_datastream(site, data):
     """Upon a new log added, send log to the dev datastream in AWS."""
-    
+
     sqs = boto3.client('sqs')
     queue_url = get_queue_url('datastreamIncomingQueue-dev')
 
@@ -153,7 +153,6 @@ def get_recent_logs_handler(event, context):
 
 
 def add_log_entry_handler(event, context):
-    # Authorization handled in the frontend
     print(event)
     body = _get_body(event)
     entry = {
