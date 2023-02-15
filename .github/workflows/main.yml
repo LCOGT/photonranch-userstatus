@@ -1,0 +1,42 @@
+name: Deploy Production Stage
+on:
+  push:
+    branches:
+      - main 
+      
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    
+    - uses: actions/checkout@v1
+        
+    - name: Set up Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16.x
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+    
+    - name: Install Serverless Framework
+      run: npm install -g serverless
+
+    - name: Serverless AWS authentication
+      run: |
+        serverless config credentials \
+          --provider aws \
+          --key ${{ secrets.SLS_AWS_ACCESS_KEY_ID }} \
+          --secret ${{ secrets.SLS_AWS_SECRET_ACCESS_KEY }}
+          
+    - name: Install Plugins
+      run: |
+        serverless plugin install --name serverless-python-requirements && \
+        serverless plugin install --name serverless-domain-manager 
+    
+    - name: Serverless Deploy
+      run: serverless deploy --stage prod
+      env:
+        SERVERLESS_ACCESS_KEY: ${{ secrets.SLS_SECRET_KEY }}
