@@ -40,3 +40,4 @@ jobs:
       run: serverless deploy --stage prod
       env:
         SERVERLESS_ACCESS_KEY: ${{ secrets.SLS_SECRET_KEY }}
+        SLS_DEBUG: "*"

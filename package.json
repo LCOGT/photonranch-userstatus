@@ -1,13 +1,10 @@
 {
-  "name": "serverless-chat",
-  "description": "",
-  "version": "0.1.0",
+  "name": "photonranch-userstatus",
+  "description": "backend for streaming observatory activity logs to the frontend",
+  "version": "1.0.0",
   "dependencies": {
-    "serverless": "^2.53.1",
-    "serverless-domain-manager": "^5.0.0"
-  },
-  "devDependencies": {
-    "serverless-jetpack": "^0.10.7",
-    "serverless-python-requirements": "^5.0.1"
+    "serverless": "^3.27.0",
+    "serverless-domain-manager": "6.0.3",
+    "serverless-python-requirements": "^6.0.0"
   }
 }

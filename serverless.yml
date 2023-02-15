@@ -1,10 +1,6 @@
 org: photonadmin
 app: photonranch
 
-# Based on tutorial: 
-# https://levelup.gitconnected.com/creating-a-chat-app-with-serverless-websockets-and-python-a-tutorial-54cbc432e4f
-
-
 service: photonranch-logstream
 
 plugins:
@@ -17,7 +13,6 @@ custom:
   stage:
     prod: logs # maybe eventually this should be a version
     dev: dev
-  region: us-east-1
   pythonRequirements:
     dockerizePip: true
     strip: false
@@ -38,31 +33,35 @@ provider:
   name: aws
   stage: ${opt:stage, "dev"}
   runtime: python3.8
+  region: us-east-1
   environment:
     LOGS_TABLE: photonranch-observatory-logs-${self:provider.stage}
-  iamRoleStatements:
-    - Effect: Allow 
-      Action: 
-        - dynamodb:PutItem
-        - dynamodb:GetItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-        - dynamodb:BatchGetItem
-        - dynamodb:BatchWriteItem
-        - dynamodb:Scan
-        - dynamodb:Query
-        - dynamodb:DescribeStream
-        - dynamodb:GetRecords
-        - dynamodb:GetShardIterator
-        - dynamodb:ListStreams
-      Resource:
-        - "arn:aws:dynamodb:us-east-1:*:*"
-    - Effect: Allow
-      Action:
-        - sqs:SendMessage
-        - sqs:GetQueueUrl
-      Resource:
-        - "arn:aws:sqs:${self:provider.region}:*:*"
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow 
+          Action: 
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchGetItem
+            - dynamodb:BatchWriteItem
+            - dynamodb:Scan
+            - dynamodb:Query
+            - dynamodb:DescribeStream
+            - dynamodb:GetRecords
+            - dynamodb:GetShardIterator
+            - dynamodb:ListStreams
+          Resource:
+            - "arn:aws:dynamodb:us-east-1:*:*"
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:GetQueueUrl
+          Resource:
+            - "arn:aws:sqs:${self:provider.region}:*:*"
 
 
 functions:
@@ -100,7 +99,7 @@ resources:
           - ""
           - - "https://"
             - Ref: "ApiGatewayRestApi"
-            - ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage.${self:provider.stage}}"
+            - ".execute-api.${self:provider.region}.amazonaws.com/${self:custom.stage.${self:provider.stage}}"
   Resources:
     logsTable: 
       Type: AWS::DynamoDB::Table
