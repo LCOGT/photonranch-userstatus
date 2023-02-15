@@ -28,3 +28,4 @@ node_modules/
 # Python files
 __pycache__/
 .pytest_cache
+.DS_Store
