@@ -70,7 +70,7 @@ functions:
     events:
       - stream: 
           type: dynamodb
-          badtchSize: 1
+          batchSize: 1
           arn:
             Fn::GetAtt:
               - logsTable
