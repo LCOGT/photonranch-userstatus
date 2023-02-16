@@ -14,8 +14,8 @@ custom:
     dev: dev
 
   pythonRequirements:
-    dockerizePip: true 
-    dockerFile: ./serverless-deploy-helpers/Dockerfile
+    dockerizePip: non-linux
+    dockerFile: serverless-deploy-helpers/Dockerfile
     slim: true
     noDeploy:
       - pytest
