@@ -9,25 +9,30 @@ plugins:
 
 custom:
   # This is the 'variable' for the customDomain.basePath value, based on the stage.
-  # Run as `sls deploy --stage <stage_name>`
   stage:
-    prod: logs # maybe eventually this should be a version
+    prod: logs
     dev: dev
+
   pythonRequirements:
-    dockerizePip: true
-    strip: false
+    dockerizePip: true 
+    dockerFile: ./serverless-deploy-helpers/Dockerfile
     slim: true
     noDeploy:
       - pytest
 
-  # Make sure to first run 'serverless create_domain'
   customDomain:
-    http:
-      domainName: 'logs.photonranch.org'
-      basePath: ${self:custom.stage.${self:provider.stage}}
-      stage: ${self:provider.stage}
-      createRoute53Record: true      
-      endpointType: regional
+    domainName: 'logs.photonranch.org'
+    basePath: ${self:custom.stage.${self:provider.stage}}
+    stage: ${self:provider.stage}
+    createRoute53Record: true      
+    createRoute53IPv6Record: true
+    autoDomain: true  # runs create_domain/delete_domain with sls deploy/remove automatically.
+
+# Keeps the package size small
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!venv/**'
 
 provider:
   name: aws
@@ -63,7 +68,6 @@ provider:
           Resource:
             - "arn:aws:sqs:${self:provider.region}:*:*"
 
-
 functions:
   newLogHandler:
     handler: handler.new_log_stream_handler
@@ -91,15 +95,6 @@ functions:
           cors: true
 
 resources:
-  Outputs:
-    ApiUrl:
-      Description: "The api URL"
-      Value:
-        Fn::Join:
-          - ""
-          - - "https://"
-            - Ref: "ApiGatewayRestApi"
-            - ".execute-api.${self:provider.region}.amazonaws.com/${self:custom.stage.${self:provider.stage}}"
   Resources:
     logsTable: 
       Type: AWS::DynamoDB::Table

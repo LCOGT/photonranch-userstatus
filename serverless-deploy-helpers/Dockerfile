@@ -1,4 +1,5 @@
 FROM lambci/lambda:python3.8
+#FROM public.ecr.aws/lambda/python:3.9
 
 FROM lambci/lambda-base:build
 
