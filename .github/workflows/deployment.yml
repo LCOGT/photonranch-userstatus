@@ -1,4 +1,5 @@
-name: Deploy Production Stage
+name: Deploy Script
+
 on:
   push:
     branches: [main, dev]
