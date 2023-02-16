@@ -32,7 +32,7 @@ jobs:
     - name: Set up deployment stage name
       id: deployment-stage
       run: |
-        echo "DEPLOY_STAGE=${{ fromJSON('{"main":"prod","dev":"dev"}')[github.ref_name] }}" >> $GITHUB_ENV
+        echo "DEPLOY_STAGE=${{ fromJSON('{"main":"prod","dev":"dev"}')[github.ref_name] }}" >> $GITHUB_ENV \
         && echo "deploy stage: $DEPLOY_STAGE"
     
     - name: Serverless Deploy
